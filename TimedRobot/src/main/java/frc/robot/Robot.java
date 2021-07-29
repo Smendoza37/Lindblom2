@@ -41,9 +41,14 @@ public class Robot extends TimedRobot {
   Joystick driveStick = new Joystick(0);
   private CANEncoder encoder_left;
   private CANEncoder encoder_right;
+
   public double lmcurr;
   public double rmcurr;
- 
+  //State
+  public static int state;
+  //Holds target position 
+  double leftEncoderTarget;
+  double rightEncoderTarget;
   
   /**
    * This function is run when the robot is first started up and should be
@@ -72,6 +77,11 @@ public class Robot extends TimedRobot {
  
     lmcurr = encoder_left.getPosition();
     rmcurr = encoder_right.getPosition();
+
+    state = 0;
+
+    leftEncoderTarget = 0;
+    rightEncoderTarget = 0;
  
  
   }
@@ -87,7 +97,7 @@ public class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() {
  
-    System.out.println(" * L:  " + lmcurr + "\t" + "  R:   " + rmcurr);
+    //System.out.println(" * L:  " + lmcurr + "\t" + "  R:   " + rmcurr);
  
   }
  
@@ -112,33 +122,101 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousPeriodic() {
-  
-  forwardDrive();
+
+  //FSM Setup
+  if (state == 0){
+    // System.out.println(state);
+     setDistanceTarget(6);
+     state = 1;
+   }
+   if (state == 1){
+     //System.out.println(state);
+     forwardDrive(2);  
+   }
+
+   if(state == 2){
+     
+     //setDistanceTarget(5);
+     //state = 3;
+     stopDrive();
 }
+  //Takes in the distance to travel and converts to the final position encoders must reach.
+  public void setDistanceTarget(double distanceToTravel)
+  {
  
-  private void forwardDrive() {
-    leftMotor1.set(0.1);
-    leftMotor2.set(0.1);
-    rightMotor1.set(0.1);
-    rightMotor2.set(0.1);
+    leftEncoderTarget = -(encoder_left.getPosition() + (distanceToTravel*4.7));
+    rightEncoderTarget = encoder_right.getPosition() + (distanceToTravel*4.7);
+ 
+  }
+
+  //Takes in the next state to continue to once distance completed. USes a speed correction
+  //algorithm to maintain straight path.(** increase adjustSpeed value for left lean and decrease for right lean.)
+  private void forwardDrive( int nextState) {
+    // leftMotor1.set(0.1);
+    // leftMotor2.set(0.1);
+    // rightMotor1.set(0.1);
+    // rightMotor2.set(0.1);
  
     double adjustSpeed = 0;
     double threshold = 2;
     double differenceof_rotation = lmcurr - rmcurr;
-    if (Math.abs(differenceof_rotation) > threshold){
-      if(differenceof_rotation > (0)){
-        adjustSpeed = 0.021;
-      }
-      if(differenceof_rotation < (0)){
-        adjustSpeed = -0.021;
-      }
-  }
-  leftMotor1.set(0.15 - adjustSpeed );
-  leftMotor1.set(0.15 - adjustSpeed );
-  rightMotor1.set(0.15 + adjustSpeed);
-  rightMotor1.set(0.15 + adjustSpeed);
+
+    //Track whether encoders reached target position.
+    boolean leftReachedTarget = false;
+    boolean rightReachedTarget = false;
+
+//     if (Math.abs(differenceof_rotation) > threshold){
+//       if(differenceof_rotation > (0)){
+//         adjustSpeed = 0.021;
+//       }
+//       if(differenceof_rotation < (0)){
+//         adjustSpeed = -0.021;
+//       }
+//   }
+//   leftMotor1.set(0.15 - adjustSpeed );
+//   leftMotor1.set(0.15 - adjustSpeed );
+//   rightMotor1.set(0.15 + adjustSpeed);
+//   rightMotor1.set(0.15 + adjustSpeed);
+// }
+if (lmcurr > -leftEncoderTarget)
+{
+  leftMotor1.set(-0.236 + adjustSpeed);
+  leftMotor2.set(-0.236 + adjustSpeed);
+  //System.out.println(leftReachedTarget);
 }
- 
+
+else{
+  leftMotor1.set(0.0);
+  leftMotor2.set(0.0);
+  leftReachedTarget = true;
+ // System.out.println(leftReachedTarget);
+  //System.out.println("left position" + leftEncoderCurr);
+}
+
+if (rmcurr < rightEncoderTarget)
+{
+  rightMotor1.set(0.2 - adjustSpeed);
+  rightMotor2.set(0.2 - adjustSpeed);
+  //System.out.println(rightReachedTarget);
+
+}
+else{
+  rightMotor1.set(0.0);
+  rightMotor2.set(0.0);
+  rightReachedTarget = true;
+}
+if(leftReachedTarget && rightReachedTarget){
+  state = nextState;
+}
+public void stopDrive(){
+  leftMotor1.set(0.0);
+  leftMotor2.set(0.0);
+  rightMotor1.set(0.0);
+  rightMotor2.set(0.0);
+}
+  
+
+
  
   /**
    * This function is called periodically during operator control.
