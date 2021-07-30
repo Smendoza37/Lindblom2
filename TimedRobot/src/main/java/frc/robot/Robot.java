@@ -30,14 +30,10 @@ import com.revrobotics.CANEncoder;
  * project.
  */
 public class Robot extends TimedRobot {
-  // private static final String kDefaultAuto = "Default";
-  // private static final String kCustomAuto = "My Auto";
-  // private String m_autoSelected;
-  // private final SendableChooser<String> m_chooser = new SendableChooser<>();
  
   private CANSparkMax leftMotor1, leftMotor2, rightMotor1, rightMotor2;
   SpeedControllerGroup left_m, right_m;
-  DifferentialDrive teleop_drive;
+  //DifferentialDrive teleop_drive;
   Joystick driveStick = new Joystick(0);
   private CANEncoder encoder_left;
   private CANEncoder encoder_right;
@@ -133,31 +129,29 @@ public class Robot extends TimedRobot {
      //System.out.println(state);
      forwardDrive(2);  
    }
-
    if(state == 2){
-     
      //setDistanceTarget(5);
      //state = 3;
      stopDrive();
+  }
 }
-  //Takes in the distance to travel and converts to the final position encoders must reach.
+
+//Takes in the distance to travel and converts to the final position encoders must reach.
   public void setDistanceTarget(double distanceToTravel)
   {
- 
     leftEncoderTarget = -(encoder_left.getPosition() + (distanceToTravel*4.7));
-    rightEncoderTarget = encoder_right.getPosition() + (distanceToTravel*4.7);
- 
+    rightEncoderTarget = encoder_right.getPosition() + (distanceToTravel*4.7); 
   }
 
-  //Takes in the next state to continue to once distance completed. USes a speed correction
-  //algorithm to maintain straight path.(** increase adjustSpeed value for left lean and decrease for right lean.)
+//Takes in the next state to continue to once distance completed. USes a speed correction
+//algorithm to maintain straight path.(** increase adjustSpeed value for left lean and decrease for right lean.)
   private void forwardDrive( int nextState) {
     // leftMotor1.set(0.1);
     // leftMotor2.set(0.1);
     // rightMotor1.set(0.1);
     // rightMotor2.set(0.1);
  
-    double adjustSpeed = 0;
+    double adjustSpeed = 0.021;
     double threshold = 2;
     double differenceof_rotation = lmcurr - rmcurr;
 
@@ -178,27 +172,21 @@ public class Robot extends TimedRobot {
 //   rightMotor1.set(0.15 + adjustSpeed);
 //   rightMotor1.set(0.15 + adjustSpeed);
 // }
-if (lmcurr > -leftEncoderTarget)
+if (lmcurr > leftEncoderTarget)
 {
-  leftMotor1.set(-0.236 + adjustSpeed);
-  leftMotor2.set(-0.236 + adjustSpeed);
-  //System.out.println(leftReachedTarget);
+  leftMotor1.set(0.15 - adjustSpeed);
+  leftMotor2.set(0.15 - adjustSpeed);
 }
-
 else{
   leftMotor1.set(0.0);
   leftMotor2.set(0.0);
   leftReachedTarget = true;
- // System.out.println(leftReachedTarget);
-  //System.out.println("left position" + leftEncoderCurr);
 }
 
 if (rmcurr < rightEncoderTarget)
 {
-  rightMotor1.set(0.2 - adjustSpeed);
-  rightMotor2.set(0.2 - adjustSpeed);
-  //System.out.println(rightReachedTarget);
-
+  rightMotor1.set(0.15 + adjustSpeed);
+  rightMotor2.set(0.15 + adjustSpeed);
 }
 else{
   rightMotor1.set(0.0);
@@ -208,13 +196,21 @@ else{
 if(leftReachedTarget && rightReachedTarget){
   state = nextState;
 }
+
+//Ends robot movement by setting motors back to zero.
 public void stopDrive(){
   leftMotor1.set(0.0);
   leftMotor2.set(0.0);
   rightMotor1.set(0.0);
   rightMotor2.set(0.0);
 }
-  
+//Turns robot **Add axis turn code here!!
+public void turnDrive(){
+  leftMotor1.set(-0.24);
+  leftMotor2.set(-0.24);
+  rightMotor1.set(-0.24);
+  rightMotor2.set(-0.24);
+}
 
 
  
