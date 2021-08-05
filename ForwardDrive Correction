@@ -1,0 +1,377 @@
+/*----------------------------------------------------------------------------*/
+/* Copyright (c) 2017-2018 FIRST. All Rights Reserved.                        */
+/* Open Source Software - may be modified and shared by FRC teams. The code   */
+/* must be accompanied by the FIRST BSD license file in the root directory of */
+/* the project.                                                               */
+/*----------------------------------------------------------------------------*/
+ 
+package frc.robot;
+ 
+import edu.wpi.first.wpilibj.TimedRobot;
+ 
+import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.SpeedControllerGroup;
+import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+ 
+import com.revrobotics.CANSparkMax;
+import com.revrobotics.CANSparkMaxLowLevel.MotorType;
+import com.revrobotics.CANEncoder; 
+ 
+/**
+ * The VM is configured to automatically run this class, and to call the
+ * functions corresponding to each mode, as described in the TimedRobot
+ * documentation. If you change the name of this class or the package after
+ * creating this project, you must also update the build.gradle file in the
+ * project.
+ */
+public class Robot extends TimedRobot {
+  // private static final String kDefaultAuto = "Default";
+  // private static final String kCustomAuto = "My Auto";
+  // private String m_autoSelected;
+  // private final SendableChooser<String> m_chooser = new SendableChooser<>();
+ 
+  private CANSparkMax leftMotor1, leftMotor2, rightMotor1, rightMotor2;
+  SpeedControllerGroup left_m, right_m;
+
+  DifferentialDrive teleop_drive;
+
+  Joystick driveStick = new Joystick(0);
+  private CANEncoder encoder_left;
+  private CANEncoder encoder_right;
+
+  public double lmcurr;
+  public double rmcurr;
+  //State
+  public static int state;
+  //Holds target position 
+  double leftEncoderTarget;
+  double rightEncoderTarget;
+
+  double leftTurnTarget;
+  double rightTurnTarget;
+  double previousEncL;
+  double previousEncR;
+  
+  /**
+   * This function is run when the robot is first started up and should be
+   * used for any initialization code.
+   */
+//}
+  @Override
+  public void robotInit() {
+    // m_chooser.setDefaultOption("Default Auto", kDefaultAuto);
+    // m_chooser.addOption("My Auto", kCustomAuto);
+    // SmartDashboard.putData("Auto choices", m_chooser);
+ 
+    leftMotor1 = new CANSparkMax(3, MotorType.kBrushless);
+    leftMotor2 = new CANSparkMax(2, MotorType.kBrushless);
+    rightMotor1 = new CANSparkMax(9, MotorType.kBrushless);
+    rightMotor2  = new CANSparkMax(8, MotorType.kBrushless);
+ 
+    left_m = new SpeedControllerGroup(leftMotor1,leftMotor2);
+    right_m = new SpeedControllerGroup(rightMotor1,rightMotor2);
+    teleop_drive = new DifferentialDrive(left_m, right_m);
+    encoder_left = leftMotor1.getEncoder();
+    encoder_right = rightMotor1.getEncoder(); 
+
+    //left_m.setInverted(true);
+ 
+    leftMotor1.setInverted(true);
+    leftMotor2.setInverted(true);
+    rightMotor1.setInverted(false);
+    rightMotor2.setInverted(false);
+
+ 
+    lmcurr = encoder_left.getPosition();
+    rmcurr = encoder_right.getPosition();
+    
+    previousEncL = lmcurr;
+    previousEncR = rmcurr;
+
+    state = 0;
+
+    leftEncoderTarget = 0;
+    rightEncoderTarget = 0;
+    leftTurnTarget = 0;
+    rightTurnTarget = 0;
+ 
+ 
+  }
+ 
+  /**
+   * This function is called every robot packet, no matter the mode. Use
+   * this for items like diagnostics that you want ran during disabled,
+   * autonomous, teleoperated and test.
+   *
+   * <p>This runs after the mode specific periodic functions, but before
+   * LiveWindow and SmartDashboard integrated updating.
+   */
+  @Override
+  public void robotPeriodic() {
+
+   
+  }
+ 
+  /**
+   * This autonomous (along with the chooser code above) shows how to select
+   * between different autonomous modes using the dashboard. The sendable
+   * chooser code works with the Java SmartDashboard. If you prefer the
+   * LabVIEW Dashboard, remove all of the chooser code and uncomment the
+   * getString line to get the auto name from the text box below the Gyro
+   *
+   * <p>You can add additional auto modes by adding additional comparisons to
+   * the switch structure below with additional strings. If using the
+   * SendableChooser make sure to add them to the chooser code above as well.
+   */
+  @Override
+  public void autonomousInit() {
+    encoder_left.setPosition(0);
+    encoder_right.setPosition(0);
+  
+    state = -1 ;
+
+    while(encoder_left.getPosition() != 0 && encoder_right.getPosition() != 0){
+    }
+    state = 0;
+    leftEncoderTarget = 0;
+    rightEncoderTarget = 0;
+  }
+ 
+  /**
+   * This function is called periodically during autonomous.
+   */
+  @Override
+  public void autonomousPeriodic() {
+  lmcurr = encoder_left.getPosition();
+  rmcurr = encoder_right.getPosition();
+  System.out.println(" * L:  " + lmcurr + "\t" + " LTarget: " + leftEncoderTarget ); 
+  System.out.println(" * R:  " + rmcurr + "\t" + " RTarget: " + rightEncoderTarget); 
+  System.out.println(state);
+
+  //FSM Setup
+  if (state == 0){
+     setDistanceTarget(7);
+     state = 1;
+   }
+   else if (state == 1){
+     forwardDrive(2);  
+   }
+   else if(state == 2){ 
+     //turnDrive(3);
+     setTurnTarget();     
+     state = 3;
+   }
+   else if(state == 3){
+    // stopDrive();
+    turnDrive(4);
+   }
+   else if(state == 4){
+    setDistanceTarget(15.5);
+    state = 5;
+   }
+   else if(state == 5){
+     forwardDrive(6);
+   }
+   else if (state == 6){
+     setTurnTarget();
+     state = 7;
+   }
+   else if (state == 7){
+    turnDrive(8);
+   }
+   else if (state == 8){
+    setDistanceTarget(2);
+    state = 9;
+   }
+    else if (state == 9){
+      forwardDrive(10);
+   }
+   else if (state == 10){
+     stopDrive();
+   }
+
+
+}
+  //Takes in the distance to travel and converts to the final position encoders must reach.
+  public void setDistanceTarget(double distanceToTravel)
+  {
+ 
+    leftEncoderTarget = (encoder_left.getPosition() + (distanceToTravel*4.7));
+    rightEncoderTarget = (encoder_right.getPosition() + (distanceToTravel*4.7));
+    //System.out.println(leftEncoderTarget + rightEncoderTarget);
+ 
+  }
+  public void setTurnTarget(){
+    leftTurnTarget = (encoder_left.getPosition() + 8.0);
+    rightTurnTarget = (encoder_right.getPosition() - 7.0 );
+  }
+
+  //Takes in the next state to continue to once distance completed. USes a speed correction
+  //algorithm to maintain straight path.(** increase adjustSpeed value for left lean and decrease for right lean.)
+  private void forwardDrive( int nextState) {
+    //System.out.println(rightMotor1.getInverted()+","+ rightMotor2.getInverted());
+    
+    double adjustSpeed = 0;
+    double threshold = 0.7; //1
+    double BASE_POWER = .1;
+    //change proportion
+    double proportionalGain = 0.1;
+
+    double leftDifference = lmcurr - previousEncL;
+    double rightDifference = rmcurr - previousEncR;
+
+    double differenceof_rotation = leftDifference - rightDifference;
+
+    //Track whether encoders reached target position.
+    boolean leftReachedTarget = false;
+    boolean rightReachedTarget = false;
+
+    if (Math.abs(differenceof_rotation) > threshold){
+      if(differenceof_rotation > (0)){
+        adjustSpeed = (Math.abs(differenceof_rotation)) * proportionalGain;
+      }
+      else if(differenceof_rotation < (0)){
+        adjustSpeed = (Math.abs(differenceof_rotation)) * -proportionalGain;
+      }
+  }
+  // if (Math.abs(differenceof_rotation) > threshold){
+  //   if (leftDifference > rightDifference){
+  //     adjustSpeed = 0.03;
+  //   }
+
+  //   if (rightDifference > leftDifference){
+  //     adjustSpeed = -0.03;
+  //   }
+  // }
+
+
+if (lmcurr < leftEncoderTarget)
+{
+  leftMotor1.set(BASE_POWER - adjustSpeed);
+  leftMotor2.set(BASE_POWER - adjustSpeed);
+  System.out.println("LEFT POWER: " + (BASE_POWER - adjustSpeed) + " AS: " + adjustSpeed );
+
+}
+else{
+  leftMotor1.set(0.0);
+  leftMotor2.set(0.0);
+  leftReachedTarget = true;
+ // System.out.println(leftReachedTarget);
+  //System.out.println("left position" + leftEncoderCurr);
+}
+
+if (rmcurr < rightEncoderTarget)
+{
+  rightMotor1.set(BASE_POWER + adjustSpeed);
+  rightMotor2.set(BASE_POWER + adjustSpeed);
+  System.out.println("RIGHT POWER: " + (BASE_POWER + adjustSpeed));
+}
+else{
+  rightMotor1.set(0.0);
+  rightMotor2.set(0.0);
+  rightReachedTarget = true;
+}
+if(leftReachedTarget && rightReachedTarget){
+  state = nextState;
+  }
+previousEncL = lmcurr;
+previousEncR = rmcurr;
+}
+
+public void turnDrive(int nextState){
+  
+   boolean leftReachedTurnTarget = false; 
+   boolean rightReachedTurnTarget = false; 
+
+   if (lmcurr < leftTurnTarget){ 
+     leftMotor1.set(0.24); 
+     leftMotor2.set(0.24); 
+    } 
+    else{ 
+      leftMotor1.set(0.0); 
+      leftMotor2.set(0.0); 
+      leftReachedTurnTarget = true; 
+    } 
+    if (rmcurr > rightTurnTarget) { 
+      rightMotor1.set(-0.24); 
+      rightMotor2.set(-0.24); 
+    } 
+    else{ 
+      rightMotor1.set(0.0); 
+      rightMotor2.set(0.0); 
+      rightReachedTurnTarget = true; 
+    } 
+    if(leftReachedTurnTarget && rightReachedTurnTarget){ 
+      state = nextState;
+     } 
+    }
+
+
+public void stopDrive(){
+  leftMotor1.set(0.0);
+  leftMotor2.set(0.0);
+  rightMotor1.set(0.0);
+  rightMotor2.set(0.0);
+}
+public void TforwardDrive(){
+  leftMotor1.set(0.2);
+  leftMotor2.set(0.2);
+  rightMotor1.set(0.2);
+  rightMotor2.set(0.2);
+}
+  
+public void TturnDrive(){
+  leftMotor1.set(0.24); 
+  leftMotor2.set(0.24); 
+  rightMotor1.set(-0.24); 
+  rightMotor2.set(-0.24); 
+
+}
+
+@Override
+  public void teleopInit(){
+    encoder_left.setPosition(0);
+    encoder_right.setPosition(0);
+
+   
+
+}
+ 
+  /**
+   * This function is called periodically during operator control.
+   */
+  @Override
+   public void teleopPeriodic() {
+    System.out.println(" * L:  " + encoder_left.getPosition() + "\t" + " R: " + encoder_right.getPosition());
+    // // if(driveStick.getRawButton((2))){
+    // //   turnDrive(1);
+    // // }
+    // // else if(driveStick.getRawButton(1)){
+    // //   forwardDrive(1);
+    // // }
+    // // else{
+    // //   teleop_drive.arcadeDrive(driveStick.getY(), -driveStick.getX());
+    // // }
+    //   // if(driveStick.getRawButton(1)){
+    //   //   TforwardDrive();
+    //   // }
+      if(driveStick.getRawButton(2)){
+        TturnDrive();
+      }
+      else{
+      teleop_drive.arcadeDrive(driveStick.getY(), driveStick.getX());
+       }    
+
+      }
+  
+
+ 
+  /**
+   * This function is called periodically during test mode.
+   */
+  @Override
+  public void testPeriodic() {
+  } }
+
+ 
+
